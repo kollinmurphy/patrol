@@ -1,0 +1,53 @@
+name: Check dependency floors
+description: >
+  Analyze a package against the lowest versions of its sibling dependencies
+  that its constraints allow, resolved from pub.dev, with
+  tool/check_dependency_floors.sh. Fail only on `release/*` branches.
+
+inputs:
+  package:
+    description: Package directory name in packages/.
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    # Outside release/* branches a failure is only reported: code may use
+    # sibling API that isn't released yet, and the floor can be raised to it
+    # only in the package's release PR, once the sibling is on pub.dev.
+    - name: Analyze against the lowest published sibling versions
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+      run: |
+        log="$RUNNER_TEMP/dependency-floors-$PACKAGE.txt"
+        if "$GITHUB_WORKSPACE/tool/check_dependency_floors.sh" "$PACKAGE" 2>&1 | tee "$log"; then
+          exit 0
+        fi
+
+        is_release_branch=false
+        case "$BRANCH" in
+          release/*) is_release_branch=true ;;
+        esac
+
+        {
+          echo "## Dependency floors of $PACKAGE: failed"
+          echo
+          if [ "$is_release_branch" = true ]; then
+            echo "Branch \`$BRANCH\` is a release branch, so this fails the check."
+          else
+            echo "Branch \`$BRANCH\` is not a release branch, so this doesn't fail the check, but the release PR must fix it."
+          fi
+          echo
+          echo '```'
+          grep -v '^   info - ' "$log" || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "$is_release_branch" = true ]; then
+          echo "::error title=dependency floors ($PACKAGE)::$PACKAGE doesn't resolve or analyze against the lowest sibling versions its constraints allow"
+          exit 1
+        fi
+        echo "::warning title=dependency floors ($PACKAGE)::$PACKAGE doesn't resolve or analyze against the lowest sibling versions its constraints allow. Not enforced outside release/* branches; the release PR must raise the floor."
