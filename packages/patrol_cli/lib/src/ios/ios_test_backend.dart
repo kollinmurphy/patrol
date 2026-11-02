@@ -519,9 +519,9 @@ class IOSTestBackend {
       // Cleanup video recording manager
       await videoRecordingManager?.dispose();
 
-      // Don't print the summary in develop
+      _logger.info(patrolLogReader.summary);
+      // Don't print the recording summary in develop
       if (!interruptible) {
-        _logger.info(patrolLogReader.summary);
         final recordingSummary = videoRecordingManager?.recordingSummary;
         if (recordingSummary != null) {
           _logger.info(recordingSummary);

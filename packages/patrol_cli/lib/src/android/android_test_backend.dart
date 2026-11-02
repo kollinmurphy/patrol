@@ -528,9 +528,9 @@ class AndroidTestBackend {
         await pullDeviceScreenshots(device, screenshotsOutputDir);
       }
 
-      // Don't print the summary in develop
+      _logger.info(patrolLogReader.summary);
+      // Don't print the recording summary in develop
       if (!interruptible) {
-        _logger.info(patrolLogReader.summary);
         final recordingSummary = videoRecordingManager?.recordingSummary;
         if (recordingSummary != null) {
           _logger.info(recordingSummary);
@@ -751,6 +751,7 @@ class AndroidTestBackend {
       final exitCode = await process.exitCode;
       patrolLogReader.stopTimer();
       processLogcat.kill();
+      _logger.info(patrolLogReader.summary);
 
       // Stops and saves any in-flight recording (e.g. the session was quit
       // mid-test).

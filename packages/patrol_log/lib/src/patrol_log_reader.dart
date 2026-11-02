@@ -88,6 +88,38 @@ class PatrolLogReader {
   String get failedTestsList =>
       failedTests.map((e) => '  - ${e.nameWithPath}').join('\n');
 
+  /// Returns `String` with one line per test containing its status, name,
+  /// runtime and the number of passed steps.
+  String get testResultsList =>
+      _singleEntries.map(_formatTestResult).join('\n');
+
+  String _formatTestResult(PatrolSingleTestEntry e) {
+    final icon = switch (e.status) {
+      TestEntryStatus.success => Emojis.success,
+      TestEntryStatus.failure => Emojis.failure,
+      TestEntryStatus.skip => Emojis.skip,
+      TestEntryStatus.start => Emojis.waiting,
+    };
+    final result = switch (e.status) {
+      TestEntryStatus.success => 'PASS',
+      TestEntryStatus.failure => 'FAIL',
+      TestEntryStatus.skip => 'SKIP',
+      TestEntryStatus.start => 'DID NOT FINISH',
+    };
+    if (e.status == TestEntryStatus.skip) {
+      return '  $icon $result ${e.name}';
+    }
+    final time = e.executionTimeOrNull;
+    final runtime = time == null
+        ? '-'
+        : '${(time.inMilliseconds / 1000).toStringAsFixed(1)}s';
+    final steps =
+        '${e.stepsPassed}/${e.stepsTotal} steps passed'
+        '${e.stepsFailed > 0 ? ', ${e.stepsFailed} failed' : ''}';
+    return '  $icon $result ${e.name} '
+        '${AnsiCodes.gray}($runtime, $steps)${AnsiCodes.reset}';
+  }
+
   /// Parse the line from the process output.
   void parse(String line) {
     try {
@@ -343,6 +375,7 @@ class PatrolLogReader {
 
   /// Returns a summary of the test results. That contains:
   ///
+  /// - Per-test results (name, pass/fail, runtime, passed steps)
   /// - Total number of tests
   /// - Number of successful tests
   /// - Number of failed tests
@@ -352,6 +385,7 @@ class PatrolLogReader {
   /// - Duration of the tests
   String get summary =>
       '\n${AnsiCodes.bold}Test summary:${AnsiCodes.reset}\n'
+      '${totalTests > 0 ? '$testResultsList\n' : ''}'
       '${Emojis.total} Total: $totalTests\n'
       '${Emojis.success} Successful: $successfulTests\n'
       '${Emojis.failure} Failed: $failedTestsCount\n'

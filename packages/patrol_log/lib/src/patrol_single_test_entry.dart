@@ -38,6 +38,25 @@ class PatrolSingleTestEntry {
   /// If test is not closed yet, the path is unknown, so return only test name.
   String get nameWithPath => closingTestEntry?.nameWithPath ?? name;
 
+  /// Step entries recorded for this test.
+  Iterable<StepEntry> get _steps => _entries.whereType<StepEntry>();
+
+  /// The number of steps that were started.
+  int get stepsTotal =>
+      _steps.where((e) => e.status == StepEntryStatus.start).length;
+
+  /// The number of steps that completed successfully.
+  int get stepsPassed =>
+      _steps.where((e) => e.status == StepEntryStatus.success).length;
+
+  /// The number of steps that failed.
+  int get stepsFailed =>
+      _steps.where((e) => e.status == StepEntryStatus.failure).length;
+
+  /// The execution time of the test, or `null` if the test is not closed.
+  Duration? get executionTimeOrNull =>
+      closingTestEntry == null ? null : executionTime;
+
   /// The execution time of the test.
   Duration get executionTime {
     final testEntry = closingTestEntry;

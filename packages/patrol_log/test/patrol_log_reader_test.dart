@@ -43,6 +43,16 @@ Map<String, dynamic> _testEntryJson({
   'error': error,
 };
 
+Map<String, dynamic> _stepEntryJson({
+  required String action,
+  required String status,
+}) => {
+  'type': 'step',
+  'action': action,
+  'status': status,
+  'timestamp': DateTime.now().toIso8601String(),
+};
+
 void main() {
   group('PatrolLogReader', () {
     group('parseEntry', () {
@@ -405,6 +415,80 @@ void main() {
 
         expect(reader.totalTests, 1);
         expect(reader.successfulTests, 1);
+      });
+    });
+
+    group('summary', () {
+      test('lists each test with result, runtime and passed steps', () async {
+        final reader = _buildReader();
+        await reader.readEntries();
+        reader
+          ..parse(
+            _patrolLogLine(_testEntryJson(name: 'first', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'tap', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'tap', status: 'success')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'enter', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'enter', status: 'success')),
+          )
+          ..parse(
+            _patrolLogLine(_testEntryJson(name: 'first', status: 'success')),
+          )
+          ..parse(
+            _patrolLogLine(_testEntryJson(name: 'second', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'tap', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'tap', status: 'success')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'wait', status: 'start')),
+          )
+          ..parse(
+            _patrolLogLine(_stepEntryJson(action: 'wait', status: 'failure')),
+          )
+          ..parse(
+            _patrolLogLine(
+              _testEntryJson(name: 'second', status: 'failure', error: 'x'),
+            ),
+          )
+          ..parse(_patrolLogLine(_testEntryJson(name: 'third', status: 'skip')))
+          ..parse(
+            _patrolLogLine(_testEntryJson(name: 'fourth', status: 'start')),
+          );
+        await pumpEventQueue();
+
+        final summary = reader.summary;
+        expect(
+          summary,
+          matches(RegExp(r'✅ PASS first .*\(\d+\.\ds, 2/2 steps passed\)')),
+        );
+        expect(
+          summary,
+          matches(
+            RegExp(r'❌ FAIL second .*\(\d+\.\ds, 1/2 steps passed, 1 failed\)'),
+          ),
+        );
+        expect(summary, contains('⏩ SKIP third'));
+        expect(summary, contains('⏳ DID NOT FINISH fourth'));
+        expect(summary, contains('(-, 0/0 steps passed)'));
+        expect(summary, contains('Total: 4'));
+        reader.close();
+      });
+
+      test('omits per-test list when no tests ran', () {
+        final reader = _buildReader();
+        expect(reader.testResultsList, isEmpty);
+        expect(reader.summary, contains('Total: 0'));
       });
     });
 

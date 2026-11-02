@@ -54,3 +54,8 @@ dev_dependencies:
 
 executables:
   patrol: main
+
+# Fork: use the in-repo patrol_log so CLI summary patches apply.
+dependency_overrides:
+  patrol_log:
+    path: ../patrol_log
