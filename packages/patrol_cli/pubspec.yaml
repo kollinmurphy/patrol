@@ -35,7 +35,12 @@ dependencies:
   # 3.x needs Dart 3.11.
   package_config: '>=2.1.1 <4.0.0'
   path: ^1.8.3
-  patrol_log: ^0.10.1
+  # Fork: use the patched patrol_log (works with `pub global activate`).
+  patrol_log:
+    git:
+      url: https://github.com/kollinmurphy/patrol.git
+      ref: mealspace
+      path: packages/patrol_log
   platform: '>=3.1.3 <3.2.0'
   process: ^5.0.1
   # 0.6.x needs Dart 3.12.
@@ -55,7 +60,3 @@ dev_dependencies:
 executables:
   patrol: main
 
-# Fork: use the in-repo patrol_log so CLI summary patches apply.
-dependency_overrides:
-  patrol_log:
-    path: ../patrol_log
